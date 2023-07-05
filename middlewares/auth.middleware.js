@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import prisma from '../models/prismaclient.model.js';
 
 export const authMiddleware = async (req, res, next) => {
     if(req.headers.authorization && req.headers.authorization.startsWith('Bearer')){
@@ -17,5 +18,25 @@ export const authMiddleware = async (req, res, next) => {
             });
         }
     }
+}
 
+export const authorize = (...roles) => async (req, res, next) => {
+    const { id }= req.user;
+    const user = await prisma.user.findUnique({
+        where:{
+            id
+        },
+        select: {
+            role: true,
+        }
+    });
+    const role = user.role;    
+    if(!roles.includes(role)){
+        return res.status(401).json({
+            status: false,
+            message: 'You are not authorized to access this resource.'
+        });
+    }
+
+    next();
 }
