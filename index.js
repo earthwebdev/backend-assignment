@@ -23,7 +23,7 @@ app.use(cors());
 // Use Helmet for header security
 app.use(helmet());
 //for the logs datas
-app.use(morgan());
+app.use(morgan('combined'));
 
 app.use("/api/v1", indexRouter);
 
