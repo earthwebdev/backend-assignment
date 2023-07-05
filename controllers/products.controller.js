@@ -1,7 +1,129 @@
+import { types } from 'util';
 import cloudinary from '../config/cloudinary.config.js';
 import cloudinaryPhotos from '../config/cloudinary.config.js';
 import prisma from '../models/prismaclient.model.js';
 import fs from 'fs';
+
+export const getProduct = async (req, res) => {
+    try {
+        let queryObj = {...req.query};
+        const removeQuery = ['select', 'sort', 'page', 'limit'];
+        removeQuery.map((query) => {
+            delete queryObj[query];
+        });
+        //console.log(typeof queryObj);
+
+        const intvaluekey = ['price', 'stock'];
+        for (const queryKey in queryObj) { 
+            //console.log(queryKey, typeof queryObj[queryKey]); 
+            if(queryKey === 'price' || queryKey === 'stock'){
+                let data;
+                ///console.log(queryObj[queryKey] === 'object', queryObj[queryKey]);
+                if(typeof queryObj[queryKey] === 'object'){
+                    //const queryObjIns = queryObj[queryKey];
+                    for (const key in queryObj[queryKey]) {
+                        //console.log(key, 'fffff');
+                        if (queryObj[queryKey].hasOwnProperty(key)) {
+                            //console.log(queryObj[queryKey][key], 'sssss');
+                            queryObj[queryKey][key] = Number(queryObj[queryKey][key]);
+                        }
+                    }
+                }else{
+                    queryObj[queryKey] = Number(queryObj[queryKey])
+                }
+            }
+            //console.log(queryObj);        
+        }
+        const product = await prisma.product.findMany({
+            where:  queryObj
+        });
+        const total = (product.length);
+        const select = {};
+        if(req.query?.select){
+            const selectData = req.query.select.split(",");
+            console.log(selectData);
+            for(let i =0; i < selectData.length; i++){
+                select[selectData[i]] = true;
+            }
+        }
+        console.log(select);
+        console.log(req.query?.sort);
+
+        const sort = [];
+        if(req.query?.sort){
+            const sortData = req.query.sort.split(",");
+            
+            //console.log(sortData);
+            for(let i =0; i < sortData.length; i++){
+                const sortObj = {};
+                const sortKey = sortData[i].split(".");
+                //console.log(sortKey);
+                sortObj[sortKey[0]] = sortKey[1];
+                sort.push(sortObj);
+            }
+            
+        } else {
+            sort.push({createdAt: 'desc'});
+        } 
+        
+        //pagination data
+        const page = req.query.page ?? 1;
+        const limit = Number(req.query.limit) ?? 20;
+        const offset = (page -1 ) * limit;
+        const skipData = (page +1) * limit;
+
+        const pagination = {};
+        if(skipData < total){
+            pagination.next = {
+                page: page + 1,
+                limit
+            }
+        }
+
+        if(offset > 0){
+            pagination.prev = {
+                page: page - 1,
+                limit
+            }
+        }
+        
+        const productData = await prisma.product.findMany({
+            where:  queryObj,
+            select,
+            orderBy: sort,
+            take: limit,
+            skip: offset
+        });
+        /* include: {
+            photos: {
+                orderBy: {
+                    createdAt: 'desc',
+                },
+            },
+        }, */
+        console.log(productData);
+        if(productData.length > 0){
+            res.status(200).json({
+                status: true,
+                data: productData,
+                pagination,
+                total,
+                message: 'Product fetched successfully.'
+            })
+        }
+        else{
+            res.status(400).json({
+                status: false,            
+                message: 'Product not found.'
+            }) 
+        }
+    } catch (error) {
+        res.status(400).json({
+            status: false,            
+            message: error.message
+        })
+    }
+}
 export const createProduct = async (req, res) => {
     try {                   
         //console.log(req.files.photos.length);
@@ -96,5 +218,59 @@ export const createProduct = async (req, res) => {
             status: false,
             message: error.message,
         });
+    }
+}
+
+export const updateProduct = async (req, res) => {
+}
+
+export const deleteProduct = async (req, res) => {
+    try {
+        const {id} = req.params;
+        //console.log(id);
+        const product = await prisma.product.findUnique({
+            where:{
+                id: Number(id)
+            }
+        });
+        //console.log(product);
+        if(product){
+            const photos = await prisma.photo.findMany({
+                where:{
+                    productId: Number(id)
+                }
+            });
+            //console.log(photos);
+            if(photos.length > 0){
+                for(let photo of photos){
+                    const photourl = photo.url;
+                    const public_id = photo.public_id;
+                    const photos = await prisma.photo.delete({
+                        where:{
+                            id: photo.id
+                        }
+                    });
+                }
+            }
+            if(product.thumbnail_public_id){
+                await cloudinary.v2.uploader.destroy(product.thumbnail_public_id);
+            }
+            
+            
+            await prisma.product.delete({
+                where: {
+                id: product.id,
+                },
+            })
+            return res.status(200).json({
+                status: true,                
+                message: "Product deleted successfully."
+            })
+        }
+    } catch (error) {
+        return res.status(200).json({
+            status: false,            
+            message: error.message
+        })
     }
 }
