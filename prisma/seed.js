@@ -19,6 +19,9 @@ async function main() {
     },
   }) */
   const user = await prisma.user.upsert({
+    where: {
+      email: 'peter@email.com'
+   },  
     create: {
         id: 1,
         fullname: 'peter singh',
@@ -28,13 +31,17 @@ async function main() {
         role: 'ADMIN',
         address: 'patan dhoka lalitpur',
         email: 'peter@email.com',
-        password: 'peter123!',
-      },
+        password: '$2b$10$IKtihvVrIpb2WsrBMyZ3G.FJTGDTBChpbSXT/9.hDiwiObcSaVwkq',
+      },      
+    update: {  email: 'peter@email.com'},
   })
 
   const user2 = await prisma.user.upsert({
+    where: {
+      email: 'peter@gmail.com'
+   },
     create: {
-        id: 1,
+        id: 2,
         fullname: 'peter selby',
         age: 34,
         phone: '9876543210',
@@ -42,8 +49,9 @@ async function main() {
         role: 'USER',
         address: 'patan dhoka lalitpur',
         email: 'peter@gmail.com',
-        password: 'peter123!',
-      },
+        password: '$2b$10$PXPaTi4G6J67TndsKyouYOX/1tPHphnrqcL0YnxdUtG14vj.IhweS',
+      },      
+     update: { email: 'peter@gmail.com'},
   })
   
   console.log({ user, user2 })

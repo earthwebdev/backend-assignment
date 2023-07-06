@@ -160,7 +160,7 @@ export const createProduct = async (req, res) => {
         
         const product = await prisma.product.create({
             data:{
-                title, description,price: Number(price), discountPercentage: Number(discountPercentage), stock: Number(stock), brand, category, thumbnail: secure_url/* , thumbnail_public_id: public_id */
+                title, description,price: parseFloat(price), discountPercentage: parseFloat(discountPercentage), stock: Number(stock), brand, category, thumbnail: secure_url, thumbnail_public_id: public_id
             }
         });
         if(cloudinaryData){
@@ -190,7 +190,7 @@ export const createProduct = async (req, res) => {
                     //public_id,
                     const photo = await prisma.photo.create({
                         data:{
-                            width, height, url,  productId
+                            width, height, url,  productId, public_id
                         }
                     });
     
@@ -285,7 +285,7 @@ export const updateProduct = async (req, res) => {
                 id: Number(id)
             },
             data:{
-                title, description, price: Number(price), discountPercentage: Number(discountPercentage) ?? 0, stock: Number(stock), brand, category, thumbnail: secure_url, thumbnail_public_id: public_id
+                title, description, price: parseFloat(price), discountPercentage: parseFloat(discountPercentage) ?? 0, stock: Number(stock), brand, category, thumbnail: secure_url, thumbnail_public_id: public_id
             },
         });
         if(updateProduct){

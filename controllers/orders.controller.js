@@ -21,11 +21,11 @@ export const getOrder = async (req, res) => {
                         //console.log(key, 'fffff');
                         if (queryObj[queryKey].hasOwnProperty(key)) {
                             //console.log(queryObj[queryKey][key], 'sssss');
-                            queryObj[queryKey][key] = Number(queryObj[queryKey][key]);
+                            queryObj[queryKey][key] = parseFloat(queryObj[queryKey][key]);
                         }
                     }
                 }else{
-                    queryObj[queryKey] = Number(queryObj[queryKey])
+                    queryObj[queryKey] = parseFloat(queryObj[queryKey])
                 }
             }
             //console.log(queryObj);        
@@ -35,16 +35,23 @@ export const getOrder = async (req, res) => {
             where:  queryObj
         });
         const total = (order.length);
-        const select = {};
+        /* const select = {};
         if(req.query?.select){
             const selectData = req.query.select.split(",");
             console.log(selectData);
             for(let i =0; i < selectData.length; i++){
                 select[selectData[i]] = true;
             }
-        }
-        console.log(select);
-        console.log(req.query?.sort);
+        }else{
+            const data = 'total,paymentId,userId';
+            const selectData = data.split(",");
+            console.log(selectData);
+            for(let i =0; i < selectData.length; i++){
+                select[selectData[i]] = true;
+            }
+        } */
+        //console.log(select);
+        //console.log(req.query?.sort);
 
         const sort = [];
         if(req.query?.sort){
@@ -64,8 +71,8 @@ export const getOrder = async (req, res) => {
         } 
         
         //pagination data
-        const page = Number(req.query?.page) ?? 1;
-        const limit = Number(req.query.limit) ?? 20;
+        const page = req.query.page? Number(req.query?.page) : 1;
+        const limit = req.query.limit ? Number(req.query.limit) : 20;
         const offset = (page -1 ) * limit;
         const skipData = (page) * limit;
 
@@ -87,10 +94,25 @@ export const getOrder = async (req, res) => {
         
         const orderData = await prisma.order.findMany({
             where:  queryObj,
-            select,
+            
             orderBy: sort,
             take: limit,
-            skip: offset
+            skip: offset,
+            include: {
+                orderitems: {
+                  orderBy: {
+                    createdAt: 'desc',
+                  },
+                  select: {
+                    productId: true,
+                    price: true,
+                    quantity: true,
+                    total: true,
+                    discountPercentage: true,
+                    discountedPrice: true,
+                  },
+                },
+              },
         });
         /* include: {
             photos: {
@@ -150,7 +172,7 @@ export const createOrder = async (req, res) => {
     }
     
     const {items} = req.body;
-    console.log(items);
+    //console.log(items);
     console.log(!items || !items[0].productId || !items[0].price || !items[0].quantity);
     if(!items || !items[0].productId || !items[0].price || !items[0].quantity){
         return res.status(400).json({
@@ -158,31 +180,31 @@ export const createOrder = async (req, res) => {
             message: 'Please enter Order item details.'
         })
     }
+    const paymentDetails = await prisma.payment.create({
+        data: {            
+            amount: parseFloat(payment?.amount),
+            provider: payment?.provider,
+            status: payment?.status,
+        }
+    });
     
+    if(!paymentDetails){
+        return res.status(400).json({
+            status: false,            
+            message: 'Order payment creation failed.'
+        })
+    }
+    const paymentId = paymentDetails.id;
     const order = await prisma.order.create({
         data: {
+            paymentId,
             userId: userId,
             total: parseFloat(req.body?.total),
         }
     });
 
     if(order){
-        const orderId = order.id;
-        const paymentDetails = await prisma.paymentDetails.create({
-            data: {
-                orderId,
-                amount: parseFloat(payment?.amount),
-                provider: payment?.provider,
-                status: payment?.status,
-            }
-        });
-
-        if(!paymentDetails){
-            return res.status(400).json({
-                status: false,            
-                message: 'Order payment creation failed.'
-            })
-        }
+        const orderId = order.id;                
 
         if(items.length > 0){
             for(let i = 0; i < items.length;i++){
@@ -222,4 +244,55 @@ export const createOrder = async (req, res) => {
         })
     }
 
+}
+
+
+export const deleteOrder = async (req, res) => {
+    try {
+        const {id} = req.params;
+        //console.log(id);
+        const order = await prisma.order.findUnique({
+            where:{
+                id: Number(id)
+            }
+        });
+        if(!order){
+            return res.status(400).json({
+                status: false,            
+                message: 'Order id not valid. Please try again.'
+            })
+        }
+        //console.log(product);
+        if(order){
+            const orderitems = await prisma.orderItems.deleteMany({
+                where:{
+                    orderId: Number(id)
+                }
+            });            
+            
+            await prisma.order.delete({
+                where: {
+                    id: Number(id),
+                },
+            })
+            
+            await prisma.payment.delete({
+                where: {
+                    id: order.paymentId ,
+                },
+            })
+
+            
+            return res.status(200).json({
+                status: true,                
+                message: "Order deleted successfully."
+            })
+        }
+    } catch (error) {
+        return res.status(400).json({
+            status: false,            
+            message: error.message
+        })
+    }
+    
 }
