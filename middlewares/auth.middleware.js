@@ -6,7 +6,21 @@ export const authMiddleware = async (req, res, next) => {
         const token = req.headers.authorization.split(' ')[1];
         //console.log(token);
         const jwt_token = process.env.JWT_SECRET_KEY;
-        const verfiyPwd = jwt.verify(token, jwt_token);
+        try {
+            jwt.verify(token, jwt_token, (err, decode) => {
+                if (err) { 
+                    return res.status(401).json({ staus:false, message: err.message}); 
+                }
+                req.user = decode; 
+                return next(); 
+            })
+        } catch (error) {
+            return res.status(401).json({
+                status: false,
+                message: error.message
+            });
+        }
+        /* const verfiyPwd = jwt.verify(token, jwt_token);
         if(verfiyPwd){
             //console.log(verfiyPwd);
             req.user = verfiyPwd;
@@ -16,7 +30,7 @@ export const authMiddleware = async (req, res, next) => {
                 status: false,
                 message: 'You are not authorized to access this resource.'
             });
-        }
+        } */
     }
 }
 
@@ -30,7 +44,8 @@ export const authorize = (...roles) => async (req, res, next) => {
             role: true,
         }
     });
-    const role = user.role;    
+    const role = user.role;   
+    //console.log(role, roles); 
     if(!roles.includes(role)){
         return res.status(401).json({
             status: false,
