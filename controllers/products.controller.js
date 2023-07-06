@@ -67,12 +67,13 @@ export const getProduct = async (req, res) => {
         } 
         
         //pagination data
-        const page = req.query.page ?? 1;
+        const page = Number(req.query?.page) ?? 1;
         const limit = Number(req.query.limit) ?? 20;
         const offset = (page -1 ) * limit;
-        const skipData = (page +1) * limit;
+        const skipData = (page) * limit;
 
         const pagination = {};
+        console.log(skipData, total, offset);
         if(skipData < total){
             pagination.next = {
                 page: page + 1,
