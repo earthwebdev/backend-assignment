@@ -6,6 +6,13 @@ export const registerUsers = async(req, res) => {
         //console.log(req.body);
         const { fullname, age, phone, gender, address, email, password } = req.body;
 
+        if(!fullname || !email || !password ){
+            return res.status(400).json({
+                status: false,
+                message: "User must have fullname, email and password.",
+            });
+        }
+
         const existUser = await prisma.user.findUnique({
             where: {
               email,
@@ -57,6 +64,12 @@ export const registerUsers = async(req, res) => {
 export const loginUsers = async (req, res) => {
     try {
         const {email, password} = req.body;
+        if(!email || !password ){
+            return res.status(400).json({
+                status: false,
+                message: "Please enter email and password.",
+            });
+        }
         const existUser = await prisma.user.findUnique({
             where: {
               email,
@@ -102,35 +115,35 @@ export const loginUsers = async (req, res) => {
 export const profileUsers = async (req, res) => {
     try {
         const {id} = req.user;
-    const existUser = await prisma.user.findUnique({
-        where: {
-          id,
-        },
-        select: {            
-            id: true,
-            fullname: true,
-            age: true,
-            phone: true,
-            gender: true,
-            role: true,
-            address: true,
-            email: true,            
-        },
-      })
+        const existUser = await prisma.user.findUnique({
+            where: {
+                id,
+            },
+            select: {            
+                id: true,
+                fullname: true,
+                age: true,
+                phone: true,
+                gender: true,
+                role: true,
+                address: true,
+                email: true,            
+            },
+        })
       
-    //console.log(existUser);
-    if(!existUser){
-        return res.status(400).json({
-            status: false,
-            message: "User not found",
-        }); 
-    }
+        //console.log(existUser);
+        if(!existUser){
+            return res.status(400).json({
+                status: false,
+                message: "User not found",
+            }); 
+        }
 
-    return res.status(200).json({
-        status: true,
-        data: existUser,        
-        message: 'User profile get succcessfully.'
-    });
+        return res.status(200).json({
+            status: true,
+            data: existUser,        
+            message: 'User profile get succcessfully.'
+        });
     } catch (error) {
         return res.status(400).json({
             status: false,
