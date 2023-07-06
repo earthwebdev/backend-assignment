@@ -15,7 +15,11 @@ router.post('/', authMiddleware, authorize('ADMIN'),
                     name: 'photos', maxCount: 12
                 }]),
                 createProduct); //upload.single('thumbnail'), upload.array('photos', 12),
-router.patch('/:id', authMiddleware, authorize('ADMIN'), updateProduct);
+router.patch('/:id', authMiddleware, authorize('ADMIN'), upload.fields([{
+                    name: 'thumbnail', maxCount: 1
+                }, {
+                    name: 'photos', maxCount: 12
+                }]), updateProduct);
 router.delete('/:id', authMiddleware, authorize('ADMIN'), deleteProduct);
 
 

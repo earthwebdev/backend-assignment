@@ -101,7 +101,7 @@ export const getProduct = async (req, res) => {
                 },
             },
         }, */
-        console.log(productData);
+        //console.log(productData);
         if(productData.length > 0){
             res.status(200).json({
                 status: true,
@@ -127,22 +127,24 @@ export const getProduct = async (req, res) => {
 export const createProduct = async (req, res) => {
     try {                   
         //console.log(req.files.photos.length);
-        //console.log(req.files, req.body, req.files.thumbnail[0].path, req.files.photos);
-        /* if(req.files.photos.length > 0){
-            //console.log(    req.files);
-            for(let i = 0; i < req.files.photos.length; i++){
-                console.log(req.files.photos[i].path);
-            }
-        }return; */ 
-        const { title, description, price, discountPercentage, stock, brand, category } = req.body;               
+        //console.log(req.files, req.body, req.files.thumbnail[0].path, req.files.photos);        
         if (!req?.files.thumbnail[0]) {
             return res.status(400).json({
                 status: false,
                 message: 'Please upload image file only.'
             });
         }
+        const { title, description, price, discountPercentage, stock, brand, category } = req.body;               
+        
 
-        console.log(req.files.thumbnail[0].path);
+        if(!title || !description || !price || !stock || !brand || !category){
+            return res.status(400).json({
+                status: false,
+                message: 'Please enter title, description, price, stock, brand and category.'
+            });
+        }
+
+        //console.log(req.files.thumbnail[0].path);
         const thumbnailPath = req.files.thumbnail[0].path;
         //const cloudinaryData = await cloudinary.v2.uploader.upload(req.file.path, {folder: 'thumbnail'});
         let cloudinaryData = await cloudinary.v2.uploader.upload(thumbnailPath, {folder: 'thumbnail'});
@@ -161,8 +163,8 @@ export const createProduct = async (req, res) => {
             }
         });
         if(cloudinaryData){
-            cloudinaryData = {};
-            fs.unlink(req.file.path, function(err) {
+            //cloudinaryData = {};
+            fs.unlink(req.files.thumbnail[0].path, function(err) {
                 if (err) {
                     console.log(err);
                 }
@@ -172,9 +174,9 @@ export const createProduct = async (req, res) => {
                
         if(product){
             if(req.files.photos.length > 0){
-               // console.log(    req.files.photos.length);
+                console.log(    req.files.photos.length);
                 for(let i = 0; i < req.files.photos.length; i++){
-                    //console.log(req.files[i].path, req.files[i]);
+                    console.log(req.files.photos[i].path, req.files.photos[i]);
                     const photoPath = req.files.photos[i].path;
                     console.log(photoPath);
                     const cloudinaryPhotoData = await cloudinaryPhotos.v2.uploader.upload(photoPath, {folder: 'photos'});
@@ -216,12 +218,153 @@ export const createProduct = async (req, res) => {
     } catch (error) {
         return res.status(400).json({
             status: false,
-            message: error.message,
+            message: error.message + 'waits dataa',
         });
     }
 }
 
 export const updateProduct = async (req, res) => {
+    try {
+        const {id} = req.params;
+        const product = await prisma.product.findUnique({
+            where:{
+                id: Number(id)
+            }
+        });
+
+        if(!product){
+            res.status(400).json({
+                status: false,            
+                message: 'Product not found.'
+            })
+        }
+
+        /* if (!req?.files.thumbnail[0]) {
+            return res.status(400).json({
+                status: false,
+                message: 'Please upload image file only.'
+            });
+        } */
+        const { title, isThumbnailSubmitted = false, isPhotosSubmitted = false, description, price, discountPercentage, stock, brand, category } = req.body;
+        if(!title || !description || !price || !stock || !brand || !category){
+            return res.status(400).json({
+                status: false,
+                message: 'Please enter title, description, price, stock, brand and category.'
+            });
+        }
+        let secure_url, public_id;
+        if ( isThumbnailSubmitted && req?.files.thumbnail[0]) {
+            const thumbnailPath = req.files.thumbnail[0].path;
+            //const cloudinaryData = await cloudinary.v2.uploader.upload(req.file.path, {folder: 'thumbnail'});
+            let cloudinaryData = await cloudinary.v2.uploader.upload(thumbnailPath, {folder: 'thumbnail'});
+            //console.log(cloudinaryData);
+            secure_url = cloudinaryData.secure_url;
+            public_id = cloudinaryData.public_id; 
+
+            if(product?.thumbnail_public_id){
+                await cloudinary.v2.uploader.destroy(product.thumbnail_public_id);
+            }
+            if(cloudinaryData){
+                //cloudinaryData = {};
+                fs.unlink(req.files.thumbnail[0].path, function(err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                    //console.log("File deleted successfully!");
+                 });
+            }
+        }else {
+            secure_url = product.thumbnail;
+            public_id = product.thumbnail_public_id;
+
+        }
+        
+        const updateProduct = await prisma.product.update({
+            where:{
+                id: Number(id)
+            },
+            data:{
+                title, description, price: Number(price), discountPercentage: Number(discountPercentage) ?? 0, stock: Number(stock), brand, category, thumbnail: secure_url, thumbnail_public_id: public_id
+            },
+        });
+        if(updateProduct){
+            if(isPhotosSubmitted && req.files.photos?.length > 0){
+                console.log(    req.files.photos.length);
+                for(let i = 0; i < req.files.photos.length; i++){
+                    console.log(req.files.photos[i].path, req.files.photos[i]);
+                    const photoPath = req.files.photos[i].path;
+                    console.log(photoPath);
+                    const cloudinaryPhotoData = await cloudinaryPhotos.v2.uploader.upload(photoPath, {folder: 'photos'});
+                    console.log(cloudinaryPhotoData);
+                    const width = cloudinaryPhotoData.width;
+                    const height = cloudinaryPhotoData.height;
+                    const url = cloudinaryPhotoData.secure_url;
+                    const public_id = cloudinaryPhotoData.public_id;
+                    const productId = product.id;
+                    //public_id,
+                    const photo = await prisma.photo.create({
+                        data:{
+                            width, height, url,  productId
+                        }
+                    });
+    
+                    fs.unlink(req.files.photos[i].path, function(err) {
+                        if (err) {
+                            console.log(err);
+                        }
+                        //console.log("File deleted successfully!");
+                     });
+                }
+
+                if(photoSubmittedData.length > 0){
+                    for(let y = 0; y < photoSubmittedData.length; y++){
+                        const id = photoSubmittedData[i];
+                        if(id){
+                            const photoData = await prisma.photo.findUnique({
+                                where:{
+                                    id
+                                }
+                            });
+                            if(photoData){
+                                const photourl = photoData?.url;
+                                const public_id = photoData?.public_id;
+
+                                if(public_id){
+                                    await cloudinary.v2.uploader.destroy(public_id);
+                                }
+
+                                await prisma.photo.delete({
+                                    where:{
+                                        id: photoData.id
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+            }
+            
+            return res.status(200).json({
+                status: true,
+                data: updateProduct,
+                message: "Product updated successfully."
+            })
+        } else {
+            return res.status(400).json({
+                status: false,
+                message: "Product updated failed",
+            });         
+        }
+        
+
+    } catch (error) {
+        res.status(400).json({
+            status: false,            
+            message: error.message
+        })
+    }
+    
 }
 
 export const deleteProduct = async (req, res) => {
@@ -244,7 +387,12 @@ export const deleteProduct = async (req, res) => {
             if(photos.length > 0){
                 for(let photo of photos){
                     const photourl = photo.url;
-                    const public_id = photo.public_id;
+                    const public_id = photo?.public_id;
+
+                    if(public_id){
+                        await cloudinary.v2.uploader.destroy(public_id);
+                    }
+
                     const photos = await prisma.photo.delete({
                         where:{
                             id: photo.id
