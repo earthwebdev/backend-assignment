@@ -29,7 +29,7 @@ app.use(morgan('combined'));
 
 const apiRequestLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
-    max: 2, // limit each IP to 10 requests per windowMs
+    max: 20, // limit each IP to 20 requests per windowMs
     handler: function (req, res, /*next*/) {
         return res.status(429).json({
           error: 'You sent too many requests. Please wait a while then try again'
