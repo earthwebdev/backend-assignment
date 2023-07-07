@@ -11,6 +11,7 @@ Plugins:
     doten": "^16.3.1",
     express
     express-mongo-sanitize
+    express-rate-limit
     helmet
     hpp
     jsonwebtoken
@@ -32,3 +33,6 @@ cd backend-assignment
 npm i
 pnpm start
 ```
+
+Swagger api url
+http://localhost:8082/api/v1/swagger/api-docs/

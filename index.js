@@ -6,6 +6,8 @@ import cors from 'cors';
 import helmet from "helmet";
 import morgan from 'morgan';
 
+import rateLimit from 'express-rate-limit';
+
 import indexRouter from './routes/index.router.js'
 
 const app = express();
@@ -24,6 +26,19 @@ app.use(cors());
 app.use(helmet());
 //for the logs datas
 app.use(morgan('combined'));
+
+const apiRequestLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 2, // limit each IP to 10 requests per windowMs
+    handler: function (req, res, /*next*/) {
+        return res.status(429).json({
+          error: 'You sent too many requests. Please wait a while then try again'
+        })
+    }
+})
+
+// Use the limit rule as an application middleware
+app.use(apiRequestLimiter)
 
 app.use("/api/v1", indexRouter);
 
