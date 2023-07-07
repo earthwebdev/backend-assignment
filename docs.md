@@ -30,7 +30,7 @@ Install the dependencies and devDependencies and start the server.
 
 ```sh
 cd backend-assignment
-npm i
+pnpm i
 pnpm start
 ```
 
