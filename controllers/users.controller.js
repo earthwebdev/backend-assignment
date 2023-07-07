@@ -7,7 +7,7 @@ export const registerUsers = async(req, res) => {
         const { fullname, age, phone, gender, address, email, password } = req.body;
 
         if(!fullname || !email || !password ){
-            return res.status(400).json({
+            return res.status(404).json({
                 status: false,
                 message: "User must have fullname, email and password.",
             });
@@ -65,7 +65,7 @@ export const loginUsers = async (req, res) => {
     try {
         const {email, password} = req.body;
         if(!email || !password ){
-            return res.status(400).json({
+            return res.status(404).json({
                 status: false,
                 message: "Please enter email and password.",
             });

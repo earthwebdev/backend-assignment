@@ -415,6 +415,11 @@ export const deleteProduct = async (req, res) => {
                 status: true,                
                 message: "Product deleted successfully."
             })
+        } else {
+            return res.status(400).json({
+                status: false,            
+                message: 'No product found.'
+            })
         }
     } catch (error) {
         return res.status(200).json({
