@@ -23,7 +23,7 @@ Plugins:
 
 ## Installation
 
-Sales Management Platform APIs requires [Node.js](https://nodejs.org/) v165+ to run.
+Sales Management Platform APIs requires [Node.js](https://nodejs.org/) v16+ to run.
 
 Install the dependencies and devDependencies and start the server.
 
